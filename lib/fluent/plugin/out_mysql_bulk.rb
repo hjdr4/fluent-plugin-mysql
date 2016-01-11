@@ -88,11 +88,15 @@ module Fluent
         )
     end
 
-    def get_placeholder(value)
-        value =~ /\$\{(?:.+)\}/ ||
-          value =~ /\%\{(?:.+)\}/ ||
-          value =~ /__(?:.+)__/
+    def get_table_name(value,data)
+        match=/(.*)\$\{(.+)\}(.*)/.match(value)
+        if match
+          table_name=(match.captures[0] or "")+data[match.captures[1]].to_s+(match.captures[2] or "")
+          return table_name
+        end
+    	  return false
     end
+
 
     def write(chunk)
       @handler = client
@@ -101,13 +105,12 @@ module Fluent
       chunk.msgpack_each do |tag, time, data|
         values << Mysql2::Client.pseudo_bind(values_template, data)
       end
-      if placeholder=self.get_placeholder(@table)
-        table=data[placeholder]
-      else
-        table=@table
+      if not table_name=self.get_table_name(table,data)
+        table_name=@table
       end
+
  
-      sql = "INSERT INTO #{table} (#{@column_names.join(',')}) VALUES #{values.join(',')}"
+      sql = "INSERT INTO #{table_name} (#{@column_names.join(',')}) VALUES #{values.join(',')}"
       sql += @on_duplicate_key_update_sql if @on_duplicate_key_update
 
       log.info "bulk insert values size => #{values.size}"
