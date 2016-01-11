@@ -105,7 +105,8 @@ module Fluent
         table=data[placeholder]
       else
         table=@table
-        
+      end
+ 
       sql = "INSERT INTO #{table} (#{@column_names.join(',')}) VALUES #{values.join(',')}"
       sql += @on_duplicate_key_update_sql if @on_duplicate_key_update
 
