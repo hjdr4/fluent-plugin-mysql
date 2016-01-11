@@ -54,19 +54,7 @@ module Fluent
     end
 
     def start
-      super
-      result = client.xquery("SHOW COLUMNS FROM #{@table}")
-      @max_lengths = []
-      @column_names.each do |column|
-        info = result.select { |x| x['Field'] == column }.first
-        r = /(char|varchar)\(([\d]+)\)/
-        begin
-          max_length = info['Type'].scan(r)[0][1].to_i
-        rescue
-          max_length = nil
-        end
-        @max_lengths << max_length
-      end
+      super      
     end
 
     def shutdown
@@ -108,7 +96,6 @@ module Fluent
       if not table_name=self.get_table_name(table,data)
         table_name=@table
       end
-
  
       sql = "INSERT INTO #{table_name} (#{@column_names.join(',')}) VALUES #{values.join(',')}"
       sql += @on_duplicate_key_update_sql if @on_duplicate_key_update
@@ -126,12 +113,8 @@ module Fluent
         @key_names.each_with_index do |key, i|
           if key == '${time}'
             value = Time.at(time).strftime('%Y-%m-%d %H:%M:%S')
-          else
-            if @max_lengths[i].nil? || record[key].nil?
-              value = record[key]
-            else
-              value = record[key].slice(0, @max_lengths[i])
-            end
+          else            
+            value = record[key]          
           end
           values << value
         end
