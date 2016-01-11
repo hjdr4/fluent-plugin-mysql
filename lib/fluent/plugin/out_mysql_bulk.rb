@@ -15,7 +15,7 @@ module Fluent
 
     config_param :on_duplicate_key_update, :bool, default: false
     config_param :on_duplicate_update_keys, :string, default: nil
-
+  
     attr_accessor :handler
 
     def initialize
@@ -88,6 +88,12 @@ module Fluent
         )
     end
 
+    def get_placeholder(value)
+        value =~ /\$\{(?:.+)\}/ ||
+          value =~ /\%\{(?:.+)\}/ ||
+          value =~ /__(?:.+)__/
+    end
+
     def write(chunk)
       @handler = client
       values = []
@@ -95,7 +101,12 @@ module Fluent
       chunk.msgpack_each do |tag, time, data|
         values << Mysql2::Client.pseudo_bind(values_template, data)
       end
-      sql = "INSERT INTO #{@table} (#{@column_names.join(',')}) VALUES #{values.join(',')}"
+      if placeholder=self.get_placeholder(@table)
+        table=data[placeholder]
+      else
+        table=@table
+        
+      sql = "INSERT INTO #{table} (#{@column_names.join(',')}) VALUES #{values.join(',')}"
       sql += @on_duplicate_key_update_sql if @on_duplicate_key_update
 
       log.info "bulk insert values size => #{values.size}"
